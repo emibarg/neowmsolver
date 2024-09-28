@@ -11,9 +11,30 @@ function Grid() {
     canvas.width = 800;
     canvas.height = 800;
 
-    // Call function to draw the grid whenever gridSize changes (for zoom)
+    // Initial grid draw
     drawGrid(context, canvas.width, canvas.height, gridSize);
-  }, [gridSize]);
+
+    // Event listener for zooming with scroll
+    const handleScrollZoom = (event) => {
+      event.preventDefault();  // Prevent default scroll behavior
+
+      if (event.deltaY < 0) {
+        // Scrolling up -> Zoom in
+        setGridSize(prevSize => prevSize + 5);
+      } else {
+        // Scrolling down -> Zoom out
+        setGridSize(prevSize => Math.max(5, prevSize - 5));
+      }
+    };
+
+    // Add event listener to canvas
+    canvas.addEventListener('wheel', handleScrollZoom);
+
+    // Clean up event listener on component unmount
+    return () => {
+      canvas.removeEventListener('wheel', handleScrollZoom);
+    };
+  }, [gridSize]);  // Redraw the grid whenever gridSize changes
 
   const drawGrid = (ctx, width, height, gridSize) => {
     // Clear the canvas before drawing
@@ -43,30 +64,22 @@ function Grid() {
     ctx.strokeStyle = '#000';  // Axes color
     ctx.lineWidth = 2;
 
-    // X axis
+    // X axis (horizontal line through the middle)
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    // Y axis
+    // Y axis (vertical line through the middle)
     ctx.beginPath();
     ctx.moveTo(width / 2, 0);
     ctx.lineTo(width / 2, height);
     ctx.stroke();
   };
 
-  // Zoom controls
-  const handleZoomIn = () => setGridSize(prevSize => prevSize + 10);
-  const handleZoomOut = () => setGridSize(prevSize => Math.max(10, prevSize - 10));
-
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
       <canvas ref={canvasRef} style={{ border: '1px solid black' }} />
-      <div>
-        <button onClick={handleZoomIn}>Zoom In</button>
-        <button onClick={handleZoomOut}>Zoom Out</button>
-      </div>
     </div>
   );
 }
