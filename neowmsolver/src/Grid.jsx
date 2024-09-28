@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 
 import Force from './Force';
+import Toolbox from './Toolbox';
 
 function Grid() {
   const canvasRef = useRef(null);
