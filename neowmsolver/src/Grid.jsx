@@ -1,5 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 
+import Force from './Force';
+
 function Grid() {
   const canvasRef = useRef(null);
   const [gridSize, setGridSize] = useState(40);
@@ -142,6 +144,7 @@ function Grid() {
   return (
     <div style={{ width: '100%', height: '600px', padding: '20px' }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', border: '1px solid black' }} />
+      <Force origin={[0, 0]} end={[1, 1]} canvasRef={canvasRef} />
     </div>
   );
 }

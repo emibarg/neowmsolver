@@ -2,13 +2,13 @@ import React, { useEffect } from "react";
 
 
 // Force component
-const Force = ({ context, origin, end, magnitude, direction }) => {
+const Force = ({ canvasRef, origin, end, magnitude, direction }) => {
 
     useEffect(() => {
-        // If the context is not available, exit early
-        if (!context || !origin || !end) return;
-
-    }, [context, origin, end, magnitude, direction]);
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        drawForce(ctx, origin, end, magnitude, direction);
+    }, [origin, end, canvasRef]);
 
     const drawForce = (ctx, origin, end, magnitude, direction) => {
         const [x0, y0] = origin;
