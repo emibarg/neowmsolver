@@ -139,12 +139,55 @@ function Grid() {
       const y = originY + i * gridSize;
       ctx.fillText((-i).toString(), originX + 5, y);
     }
+
+    // Draw the force
+    const origin = [originX, originY];
+    const end = [originX + gridSize, originY - gridSize];
+    drawForce(ctx, origin, end, 1, 0);
+
+  };
+
+  const drawForce = (ctx, origin, end, magnitude, direction) => {
+    const [x0, y0] = origin;
+    const [x1, y1] = end;
+
+    // Draw the force on the grid
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw the arrowhead
+    const angle = Math.atan2(y1 - y0, x1 - x0);
+    const arrowSize = 10;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+
+    // Draw the first half of the arrowhead
+    ctx.lineTo(
+      x1 - arrowSize * Math.cos(angle - Math.PI / 6),
+      y1 - arrowSize * Math.sin(angle - Math.PI / 6)
+    );
+
+    // Draw the second half of the arrowhead
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(
+      x1 - arrowSize * Math.cos(angle + Math.PI / 6),
+      y1 - arrowSize * Math.sin(angle + Math.PI / 6)
+    );
+
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 2;
+    ctx.stroke();
   };
 
   return (
     <div style={{ width: '100%', height: '600px', padding: '20px' }}>
       <canvas ref={canvasRef} style={{ width: '100%', height: '100%', border: '1px solid black' }} />
-      <Force origin={[0, 0]} end={[1, 1]} canvasRef={canvasRef} />
+      <Force origin={[0, 0]} end={[0+gridSize, 0+gridSize]} canvasRef={canvasRef} />
     </div>
   );
 }
