@@ -1,7 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
+import event from 'react';
 
 import Force from './Force';
 import Toolbox from './Toolbox';
+import CreateBeams from './components/beams';
 
 function Grid() {
   const canvasRef = useRef(null);
@@ -9,6 +11,10 @@ function Grid() {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
+  const [currentTool, setCurrentTool] = useState('Select');
+  const [elements, setElements] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [startPoint, setStartPoint] = useState(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -41,76 +47,102 @@ function Grid() {
     };
 
     const handleMouseDown = (event) => {
-      setIsDragging(true);
-      setLastPosition({ x: event.clientX, y: event.clientY });
-    };
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+  
+        if (currentTool === 'Select') {
+          setIsDragging(true);
+          setLastPosition({ x: event.clientX, y: event.clientY });
+        } else if (currentTool == 'Beam') {
+            setIsDrawing(true);
+          setStartPoint({ x, y });
+        }
+      };
 
-    const handleMouseMove = (event) => {
-      if (isDragging) {
-        const deltaX = event.clientX - lastPosition.x;
-        const deltaY = event.clientY - lastPosition.y;
-        setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-        setLastPosition({ x: event.clientX, y: event.clientY });
-      }
-    };
+      const handleMouseMove = (event) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+  
+        if (isDragging) {
+          const deltaX = event.clientX - lastPosition.x;
+          const deltaY = event.clientY - lastPosition.y;
+          setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
+          setLastPosition({ x: event.clientX, y: event.clientY });
+        } else if (isDrawing && startPoint) {
+          drawGrid(context, canvas.width, canvas.height, gridSize);
+          drawTempElement(context, startPoint, { x, y });
+        }
+      };
 
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
+      const handleMouseUp = () => {
+        if (isDrawing && startPoint) {
+          const rect = canvas.getBoundingClientRect();
+          const endPoint = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+          };
+          addElement(startPoint, endPoint);
+          setIsDrawing(false);
+          setStartPoint(null);
+        }
+        setIsDragging(false);
+      };
 
-    canvas.addEventListener('wheel', handleScrollZoom);
-    canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
-    canvas.addEventListener('mouseleave', handleMouseUp);
+      canvas.addEventListener('wheel', handleScrollZoom);
+      canvas.addEventListener('mousedown', handleMouseDown);
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('mouseup', handleMouseUp);
+      canvas.addEventListener('mouseleave', handleMouseUp);
+  
+      return () => {
+        window.removeEventListener('resize', resizeCanvas);
+        canvas.removeEventListener('wheel', handleScrollZoom);
+        canvas.removeEventListener('mousedown', handleMouseDown);
+        canvas.removeEventListener('mousemove', handleMouseMove);
+        canvas.removeEventListener('mouseup', handleMouseUp);
+        canvas.removeEventListener('mouseleave', handleMouseUp);
+      };
+    }, [gridSize, isDragging, lastPosition, offset, currentTool, isDrawing, startPoint]);
 
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      canvas.removeEventListener('wheel', handleScrollZoom);
-      canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
-      canvas.removeEventListener('mouseleave', handleMouseUp);
-    };
-  }, [gridSize, isDragging, lastPosition, offset]);
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        drawGrid(context, canvas.width, canvas.height, gridSize);
+      }, [gridSize, offset, elements]);
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    drawGrid(context, canvas.width, canvas.height, gridSize);
-  }, [gridSize, offset]);
-
-  const drawGrid = (ctx, width, height, gridSize) => {
-    ctx.clearRect(0, 0, width, height);
+      const drawGrid = (ctx, width, height, gridSize) => {
+        ctx.clearRect(0, 0, width, height);
+        
+        const originX = width / 2 - offset.x;
+        const originY = height / 2 - offset.y;
     
-    const originX = width / 2 - offset.x;
-    const originY = height / 2 - offset.y;
+        // Calculate grid boundaries
+        const leftmostLine = Math.floor((offset.x - width / 2) / gridSize);
+        const rightmostLine = Math.ceil((offset.x + width / 2) / gridSize);
+        const topmostLine = Math.floor((offset.y - height / 2) / gridSize);
+        const bottommostLine = Math.ceil((offset.y + height / 2) / gridSize);
+    
+        // Draw grid lines
+        ctx.strokeStyle = '#ddd';
+        ctx.lineWidth = 1;
 
-    // Calculate grid boundaries
-    const leftmostLine = Math.floor((offset.x - width / 2) / gridSize);
-    const rightmostLine = Math.ceil((offset.x + width / 2) / gridSize);
-    const topmostLine = Math.floor((offset.y - height / 2) / gridSize);
-    const bottommostLine = Math.ceil((offset.y + height / 2) / gridSize);
-
-    // Draw grid lines
-    ctx.strokeStyle = '#ddd';
-    ctx.lineWidth = 1;
-
-    for (let i = leftmostLine; i <= rightmostLine; i++) {
-      const x = originX + i * gridSize;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, height);
-      ctx.stroke();
-    }
-
-    for (let i = topmostLine; i <= bottommostLine; i++) {
-      const y = originY + i * gridSize;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-    }
+        for (let i = leftmostLine; i <= rightmostLine; i++) {
+            const x = originX + i * gridSize;
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+          }
+      
+          for (let i = topmostLine; i <= bottommostLine; i++) {
+            const y = originY + i * gridSize;
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+          }
 
     // Draw axes
     ctx.strokeStyle = '#000';
@@ -133,6 +165,7 @@ function Grid() {
       ctx.fillText(i.toString(), x, originY + 5);
     }
 
+
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
@@ -141,54 +174,42 @@ function Grid() {
       ctx.fillText((-i).toString(), originX + 5, y);
     }
 
-    // Draw the force
-    const origin = [originX, originY];
-    const end = [originX + gridSize, originY - gridSize];
-    drawForce(ctx, origin, end, 1, 0);
-
+    // Draw elements
+    elements.forEach(element => {
+      drawElement(ctx, element);
+    });
   };
 
-  const drawForce = (ctx, origin, end, magnitude, direction) => {
-    const [x0, y0] = origin;
-    const [x1, y1] = end;
-
-    // Draw the force on the grid
-    ctx.beginPath();
-    ctx.moveTo(x0, y0);
-    ctx.lineTo(x1, y1);
-
-    ctx.strokeStyle = 'blue';
+  const drawTempElement = (ctx, start, end) => {
+    ctx.strokeStyle = '#00F';
     ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Draw the arrowhead
-    const angle = Math.atan2(y1 - y0, x1 - x0);
-    const arrowSize = 10;
     ctx.beginPath();
-    ctx.moveTo(x1, y1);
-
-    // Draw the first half of the arrowhead
-    ctx.lineTo(
-      x1 - arrowSize * Math.cos(angle - Math.PI / 6),
-      y1 - arrowSize * Math.sin(angle - Math.PI / 6)
-    );
-
-    // Draw the second half of the arrowhead
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(
-      x1 - arrowSize * Math.cos(angle + Math.PI / 6),
-      y1 - arrowSize * Math.sin(angle + Math.PI / 6)
-    );
-
-    ctx.strokeStyle = 'blue';
-    ctx.lineWidth = 2;
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
     ctx.stroke();
   };
+
+  const drawElement = (ctx, element) => {
+    ctx.strokeStyle = '#00F';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(element.start.x, element.start.y);
+    ctx.lineTo(element.end.x, element.end.y);
+    ctx.stroke();
+  };
+
+  const addElement = (start, end) => {
+    if (currentTool === 'Beam') {
+      CreateBeams(start, end);
+    }
+};
 
   return (
-    <div style={{ width: '100%', height: '600px', padding: '20px' }}>
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', border: '1px solid black' }} />
-      <Force origin={[0, 0]} end={[0+gridSize, 0+gridSize]} canvasRef={canvasRef} />
+    <div>
+      <Toolbox currentTool={currentTool} setCurrentTool={setCurrentTool} />
+      <div style={{ width: '100%', height: '600px', padding: '20px' }}>
+        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', border: '1px solid black' }} />
+      </div>
     </div>
   );
 }

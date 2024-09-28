@@ -9,7 +9,7 @@ function App() {
     <div className="App">
       
       <h1>Structural Beam Calculator with Grid</h1>
-      <Toolbox/>
+
       <Grid />  {/* Use the Grid component */}
       <CreateBeams /> {/* Use the createBeams component */}
     </div>
