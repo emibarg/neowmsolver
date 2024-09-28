@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
-const CreateBeams = (startPoint, endPoint){
+
+function CreateBeams(startPoint, endPoint) {
     const length = Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2));
     const angle = Math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x);
     const angleInDegrees = (angle * (180 / Math.PI) + 360) % 360;
@@ -14,11 +15,12 @@ const CreateBeams = (startPoint, endPoint){
             strokeWidth="2"
           />
           <text x={startPoint.x} y={startPoint.y - 10} fill="black">
-            Length: {beamLength.toFixed(2)}
+            Length: {length.toFixed(2)}
           </text>
           <text x={startPoint.x} y={startPoint.y - 20} fill="black">
-            Angle: {angle.toFixed(2)}
+            Angle: {angleInDegrees.toFixed(2)}
           </text>
         </svg>
       );
 }
+export default CreateBeams;
