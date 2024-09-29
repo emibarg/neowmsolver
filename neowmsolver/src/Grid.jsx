@@ -1,6 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import event from 'react';
-
 import Force from './Force';
 import Toolbox from './Toolbox';
 import CreateBeams from './components/beams';
@@ -47,102 +45,106 @@ function Grid() {
     };
 
     const handleMouseDown = (event) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-  
-        if (currentTool === 'Select') {
-          setIsDragging(true);
-          setLastPosition({ x: event.clientX, y: event.clientY });
-        } else if (currentTool == 'Beam') {
-            setIsDrawing(true);
-          setStartPoint({ x, y });
-        }
-      };
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
 
-      const handleMouseMove = (event) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-  
-        if (isDragging) {
-          const deltaX = event.clientX - lastPosition.x;
-          const deltaY = event.clientY - lastPosition.y;
-          setOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-          setLastPosition({ x: event.clientX, y: event.clientY });
-        } else if (isDrawing && startPoint) {
-          drawGrid(context, canvas.width, canvas.height, gridSize);
-          drawTempElement(context, startPoint, { x, y });
-        }
-      };
+      if (currentTool === 'Select') {
+        setIsDragging(true);
+        setLastPosition({ x: event.clientX, y: event.clientY });
+      } else if (currentTool === 'Beam') {
+        setIsDrawing(true);
+        setStartPoint({ x: snapToGrid(x), y: snapToGrid(y) }); // Snap to grid
+      }
+    };
 
-      const handleMouseUp = () => {
-        if (isDrawing && startPoint) {
-          const rect = canvas.getBoundingClientRect();
-          const endPoint = {
-            x: event.clientX - rect.left,
-            y: event.clientY - rect.top
-          };
-          addElement(startPoint, endPoint);
-          setIsDrawing(false);
-          setStartPoint(null);
-        }
-        setIsDragging(false);
-      };
+    const handleMouseMove = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
 
-      canvas.addEventListener('wheel', handleScrollZoom);
-      canvas.addEventListener('mousedown', handleMouseDown);
-      canvas.addEventListener('mousemove', handleMouseMove);
-      canvas.addEventListener('mouseup', handleMouseUp);
-      canvas.addEventListener('mouseleave', handleMouseUp);
-  
-      return () => {
-        window.removeEventListener('resize', resizeCanvas);
-        canvas.removeEventListener('wheel', handleScrollZoom);
-        canvas.removeEventListener('mousedown', handleMouseDown);
-        canvas.removeEventListener('mousemove', handleMouseMove);
-        canvas.removeEventListener('mouseup', handleMouseUp);
-        canvas.removeEventListener('mouseleave', handleMouseUp);
-      };
-    }, [gridSize, isDragging, lastPosition, offset, currentTool, isDrawing, startPoint]);
-
-    useEffect(() => {
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
+      if (isDragging) {
+        const deltaX = event.clientX - lastPosition.x;
+        const deltaY = event.clientY - lastPosition.y;
+        setOffset(prev => ({ x: prev.x - deltaX, y: prev.y - deltaY }));
+        setLastPosition({ x: event.clientX, y: event.clientY });
+      } else if (isDrawing && startPoint) {
         drawGrid(context, canvas.width, canvas.height, gridSize);
-      }, [gridSize, offset, elements]);
+        drawTempElement(context, startPoint, { x: snapToGrid(x), y: snapToGrid(y) }); // Snap endpoint
+      }
+    };
 
-      const drawGrid = (ctx, width, height, gridSize) => {
-        ctx.clearRect(0, 0, width, height);
-        
-        const originX = width / 2 - offset.x;
-        const originY = height / 2 - offset.y;
-    
-        // Calculate grid boundaries
-        const leftmostLine = Math.floor((offset.x - width / 2) / gridSize);
-        const rightmostLine = Math.ceil((offset.x + width / 2) / gridSize);
-        const topmostLine = Math.floor((offset.y - height / 2) / gridSize);
-        const bottommostLine = Math.ceil((offset.y + height / 2) / gridSize);
-    
-        // Draw grid lines
-        ctx.strokeStyle = '#ddd';
-        ctx.lineWidth = 1;
+    const handleMouseUp = (event) => {
+      if (isDrawing && startPoint) {
+        const rect = canvas.getBoundingClientRect();
+        const endPoint = {
+          x: snapToGrid(event.clientX - rect.left),
+          y: snapToGrid(event.clientY - rect.top)
+        };
+        addElement(startPoint, endPoint); // Store the new beam without offset
+        setIsDrawing(false);
+        setStartPoint(null);
+      }
+      setIsDragging(false);
+    };
 
-        for (let i = leftmostLine; i <= rightmostLine; i++) {
-            const x = originX + i * gridSize;
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-          }
-      
-          for (let i = topmostLine; i <= bottommostLine; i++) {
-            const y = originY + i * gridSize;
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(width, y);
-            ctx.stroke();
-          }
+    canvas.addEventListener('wheel', handleScrollZoom);
+    canvas.addEventListener('mousedown', handleMouseDown);
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mouseup', handleMouseUp);
+    canvas.addEventListener('mouseleave', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+      canvas.removeEventListener('wheel', handleScrollZoom);
+      canvas.removeEventListener('mousedown', handleMouseDown);
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mouseup', handleMouseUp);
+      canvas.removeEventListener('mouseleave', handleMouseUp);
+    };
+  }, [gridSize, isDragging, lastPosition, offset, currentTool, isDrawing, startPoint]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    drawGrid(context, canvas.width, canvas.height, gridSize);
+  }, [gridSize, offset, elements]);
+
+  const snapToGrid = (value) => {
+    return Math.round(value / gridSize) * gridSize; // Snap to nearest grid point
+  };
+
+  const drawGrid = (ctx, width, height, gridSize) => {
+    ctx.clearRect(0, 0, width, height);
+    
+    const originX = width / 2 - offset.x;
+    const originY = height / 2 - offset.y;
+
+    // Calculate grid boundaries
+    const leftmostLine = Math.floor((offset.x - width / 2) / gridSize);
+    const rightmostLine = Math.ceil((offset.x + width / 2) / gridSize);
+    const topmostLine = Math.floor((offset.y - height / 2) / gridSize);
+    const bottommostLine = Math.ceil((offset.y + height / 2) / gridSize);
+
+    // Draw grid lines
+    ctx.strokeStyle = '#ddd';
+    ctx.lineWidth = 1;
+
+    for (let i = leftmostLine; i <= rightmostLine; i++) {
+      const x = originX + i * gridSize;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, height);
+      ctx.stroke();
+    }
+
+    for (let i = topmostLine; i <= bottommostLine; i++) {
+      const y = originY + i * gridSize;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
 
     // Draw axes
     ctx.strokeStyle = '#000';
@@ -165,7 +167,6 @@ function Grid() {
       ctx.fillText(i.toString(), x, originY + 5);
     }
 
-
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
@@ -174,7 +175,7 @@ function Grid() {
       ctx.fillText((-i).toString(), originX + 5, y);
     }
 
-    // Draw elements
+    // Draw elements (beams)
     elements.forEach(element => {
       drawElement(ctx, element);
     });
@@ -184,8 +185,8 @@ function Grid() {
     ctx.strokeStyle = '#00F';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(start.x, start.y);
-    ctx.lineTo(end.x, end.y);
+    ctx.moveTo(start.x + offset.x, start.y + offset.y); // Adjust for offset
+    ctx.lineTo(end.x + offset.x, end.y + offset.y); // Adjust for offset
     ctx.stroke();
   };
 
@@ -193,16 +194,20 @@ function Grid() {
     ctx.strokeStyle = '#00F';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(element.start.x, element.start.y);
-    ctx.lineTo(element.end.x, element.end.y);
+    ctx.moveTo(element.start.x, element.start.y); // Use stored coordinates
+    ctx.lineTo(element.end.x, element.end.y); // Use stored coordinates
     ctx.stroke();
   };
 
   const addElement = (start, end) => {
     if (currentTool === 'Beam') {
-      CreateBeams(start, end);
+      // Store the start and end points without applying the offset
+      setElements(prevElements => [
+        ...prevElements,
+        { start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y } } // Store the new beam without offset
+      ]);
     }
-};
+  };
 
   return (
     <div>
